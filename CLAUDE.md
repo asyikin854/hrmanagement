@@ -22,8 +22,9 @@ The HR system ("Roster") and Finance app run as Claude artifacts. Public demo co
 `demo/` (see README). The demo HTML is the artifact code plus small hooks (seed data, demo banner, AI buttons show a
 "book a demo" message); when the apps change, rebuild the demo copies from the new artifact code and re-apply the hooks.
 Never copy data from the real artifacts' databases into this repo: it holds real staff records and clock-in locations.
-Known gap: the HR app's payroll is Singapore CPF only (the demo sets CPF to 0%); Malaysian EPF/SOCSO/EIS/PCB is in the
-Finance app's LHDN tab.
+The real HR artifact's payroll still uses Singapore CPF. The demo copy replaces it with Malaysian KWSP (EPF), PERKESO
+(SOCSO), SIP (EIS) and PCB using the same rules as the PCB calculator below (resident, individual relief only), and
+renames the CPF labels, settings and onboarding steps. Keep it that way when rebuilding the demo.
 
 ## Site structure (plain static HTML, no build step)
 | Page | Bahasa Malaysia (default, x-default) | English |

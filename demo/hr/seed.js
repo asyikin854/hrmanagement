@@ -23,7 +23,6 @@ window.ESR_SEED = function (h) {
   var cycle = "H" + half + " " + yr, prevCycle = half === 1 ? "H2 " + (yr - 1) : "H1 " + yr;
   var settings = {
     company: "Contoh Teknologi Sdn Bhd", cycle: cycle, annualDays: 14, sickDays: 14,
-    cpfEe: 0, cpfEr: 0, owCeiling: 8000,
     workStart: "09:00", graceMins: 15, absentCutoff: "11:00", autoFrom: "",
     sites: "KL HQ, 3.1390, 101.6869, 200"
   };
@@ -46,7 +45,7 @@ window.ESR_SEED = function (h) {
     ["e13", "Hafiz bin Ismail", "Account Executive", "Sales", "L2", "Full-time", "Kuala Lumpur", "Male", "e04", 820, 820, 50400, 500, 2, "hafiz"],
     ["e14", "Rachel Goh", "Senior Account Manager", "Sales", "L4", "Full-time", "Kuala Lumpur", "Female", "e04", 1250, 1000, 103200, 800, 4, "rachel"],
     ["e15", "Kavitha a/p Rajan", "Account Executive", "Sales", "L2", "Full-time", "Kuala Lumpur", "Female", "e14", 168, 168, 54000, 500, 3, "kavitha"],
-    ["e16", "Lee Jun Hao", "Business Development Manager", "Sales", "L3", "Full-time", "Singapore", "Male", "e04", 700, 330, 96000, 800, 4, "junhao"],
+    ["e16", "Lee Jun Hao", "Business Development Manager", "Sales", "L3", "Full-time", "Kuala Lumpur", "Male", "e04", 700, 330, 96000, 800, 4, "junhao"],
     ["e17", "Amirah binti Yusof", "Operations Executive", "Operations", "L2", "Full-time", "Kuala Lumpur", "Female", "e18", 540, 540, 52800, 300, 4, "amirah"],
     ["e18", "Wong Kah Hin", "Operations Manager", "Operations", "L4", "Full-time", "Kuala Lumpur", "Male", "e01", 1450, 600, 114000, 600, 3, "kahhin"],
     ["e19", "Nadia binti Hamzah", "Customer Success Executive", "Operations", "L2", "Full-time", "Kuala Lumpur", "Female", "e18", 980, 450, 55200, 300, 4, "nadia"],
