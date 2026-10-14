@@ -18,7 +18,12 @@ Features to promote (keep claims factual; don't invent security certifications, 
 - LHDN: PCB/CP39 data, EA forms, Form E (C.P.8D list), CP204 instalments and Form C tracking.
 - AI: CV summaries and fit scores, retention risk reads, job description writer, review drafts, payroll checks,
   bank transaction categorising, "Ask HR" and "Ask Finance" chat.
-The HR system ("Roster") and Finance app currently run as Claude artifacts (prototypes); they are not in this repo.
+The HR system ("Roster") and Finance app run as Claude artifacts. Public demo copies with fictional sample data live in
+`demo/` (see README). The demo HTML is the artifact code plus small hooks (seed data, demo banner, AI buttons show a
+"book a demo" message); when the apps change, rebuild the demo copies from the new artifact code and re-apply the hooks.
+Never copy data from the real artifacts' databases into this repo: it holds real staff records and clock-in locations.
+Known gap: the HR app's payroll is Singapore CPF only (the demo sets CPF to 0%); Malaysian EPF/SOCSO/EIS/PCB is in the
+Finance app's LHDN tab.
 
 ## Site structure (plain static HTML, no build step)
 | Page | Bahasa Malaysia (default, x-default) | English |
