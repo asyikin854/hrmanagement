@@ -6,7 +6,7 @@ Plesk (Git extension, automatic deployment via GitHub webhook) deploys every pus
 subdomain's web root, so **everything in this repo is public**. Never commit secrets, customer data or drafts.
 
 ## What the business sells
-An HR, payroll and finance system for SMEs in Malaysia and Singapore, with AI built in. Price: **RM999 a year**.
+An HR, payroll and finance system for SMEs in Malaysia and Singapore, with AI built in. Price: **RM1,999 a year**.
 Contact: WhatsApp/phone **011-1632 0694** (wa.me/601116320694), email **work@esrmy.com**.
 Features to promote (keep claims factual; don't invent security certifications, customer counts or free trials):
 - HR: employee profiles, org chart, CSV import, leave with balances and team calendar, recruitment board with a
