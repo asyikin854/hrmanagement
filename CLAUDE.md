@@ -6,7 +6,7 @@ Plesk (Git extension, automatic deployment via GitHub webhook) deploys every pus
 subdomain's web root, so **everything in this repo is public**. Never commit secrets, customer data or drafts.
 
 ## What the business sells
-An HR, payroll and finance system for SMEs in Malaysia and Singapore, with AI built in. Price: **RM1,999 a year**.
+An HR, payroll and finance system for SMEs in Malaysia and Singapore, with AI built in. Price: **RM1,999 a year** or **RM550 every 3 months** (yearly saves RM201).
 Contact: WhatsApp/phone **011-1632 0694** (wa.me/601116320694), email **work@esrmy.com**.
 Features to promote (keep claims factual; don't invent security certifications, customer counts or free trials):
 - HR: employee profiles, org chart, CSV import, leave with balances and team calendar, recruitment board with a
@@ -45,6 +45,13 @@ icons), `sitemap.xml`, `robots.txt`.
   SoftwareApplication + FAQPage on home, WebApplication on the calculator, Article on the EA guide, BreadcrumbList on
   tool pages). FAQ JSON-LD must match the visible FAQ text exactly. Text must be in the HTML, not injected by JS.
 - New page → add it to `sitemap.xml` with hreflang links; update `<lastmod>` whenever a page changes.
+- Subscriptions: the Pricing section on both home pages has a 3-month and a yearly plan card. Each "Subscribe"
+  button (`data-plan="quarterly"` / `"yearly"`) opens the payment gateway's hosted payment page set in `PAY_LINKS` at
+  the top of `assets/js/main.js`; while a link is empty the button opens WhatsApp with the plan named. Never put gateway
+  secret keys in this repo (it is public); use the gateway's ready-made payment page links only. After paying, the
+  gateway should return customers to `/langganan-berjaya/` (BM) or `/en/subscription-confirmed/` (EN); both are
+  noindex and not in the sitemap. If prices change, update the plan cards, meta descriptions, FAQ (visible and
+  JSON-LD) and the JSON-LD offers on both home pages.
 - Lead capture has no backend: the forms open WhatsApp or email with the visitor's details filled in. Don't add
   scripts that send data elsewhere without the owner's agreement.
 - Images: WebP, max ~1400px wide, with width/height and alt text in the page language; light and dark versions via

@@ -1,6 +1,9 @@
 (function(){
 "use strict";
 var PHONE="601116320694",EMAIL="work@esrmy.com";
+// Payment pages for the Subscribe buttons (from the payment gateway). Empty = button opens WhatsApp instead.
+var PAY_LINKS={quarterly:"",yearly:""};
+Array.prototype.forEach.call(document.querySelectorAll("[data-plan]"),function(b){var u=PAY_LINKS[b.getAttribute("data-plan")];if(u){b.href=u;b.removeAttribute("target");b.removeAttribute("rel")}});
 var L=document.documentElement.lang==="ms"?"ms":"en";
 var M={en:{subMonthly:"For a resident employee paid the same amount all year",subZero:"Below the tax threshold after reliefs",subNr:"Non-residents pay a flat 30%",errNeed:"Please add your name and a WhatsApp number or email.",msgPcb:"PCB calculator: please send me the full breakdown and a demo",msgEa:"EA form guide: please send me the EA checklist",msgCalc:"My calculation",name:"Name",company:"Company",contact:"WhatsApp number or email",size:"Number of employees",salary:"Monthly salary"},
 ms:{subMonthly:"Untuk pekerja pemastautin yang dibayar amaun sama sepanjang tahun",subZero:"Di bawah paras cukai selepas pelepasan",subNr:"Bukan pemastautin dikenakan kadar rata 30%",errNeed:"Sila isi nama anda dan nombor WhatsApp atau e-mel.",msgPcb:"Kalkulator PCB: sila hantar pecahan penuh dan demo",msgEa:"Panduan borang EA: sila hantar senarai semak EA",msgCalc:"Kiraan saya",name:"Nama",company:"Syarikat",contact:"Nombor WhatsApp atau e-mel",size:"Bilangan pekerja",salary:"Gaji bulanan"}}[L];
