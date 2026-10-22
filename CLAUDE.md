@@ -68,6 +68,13 @@ icons), `sitemap.xml`, `robots.txt`.
 - Security rules that must hold: staff-written clock records are sanitised in `app/api/data.php` and escaped in the HR
   app's `whereCell` (the build checks this); AI calls reserve their slot before calling (`app/api/ai.php`) and are
   capped by requests and US$ per company; `process_purchase` checks our payments table before calling CHIP.
+- HR is the single source of employees and payroll for customers. HR employees carry the PCB inputs (IC, tax no., EPF/
+  SOCSO no., tax status, marital status, children, monthly zakat, TP3 earlier-income fields) and HR payroll uses the
+  LHDN computerised method month by month (`pcbCalc`, same as Finance's). `app/api/data.php` gives Finance read-only
+  copies as `hr_employees`/`hr_payroll`; Finance's `MYE()`/`MYP()` map them into its LHDN shapes (EA, CP39, Form E) and
+  `postings()` posts each Finalized HR month (Dr 5000/5020/5010, Cr 2200 EPF+SOCSO+EIS, Cr 2300 PCB+zakat, Cr 1000 net)
+  unless a journal with ref "Payroll YYYY-MM" exists. Finance keeps only PCB/statutory payment records in `my_payroll`.
+  Without HR data (the public Finance demo) Finance falls back to its own `my_employees`/`my_payroll`.
 - Lead capture has no backend: the forms open WhatsApp or email with the visitor's details filled in. Don't add
   scripts that send data elsewhere without the owner's agreement.
 - Images: WebP, max ~1400px wide, with width/height and alt text in the page language; light and dark versions via

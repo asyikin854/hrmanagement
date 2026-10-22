@@ -51,7 +51,12 @@ function staff_may(string $col, string $id, string $own, bool $write): bool
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
     $since = max(0, (int)($_GET['since'] ?? 0));
-    if ($edit) {
+    if ($edit && $app === 'fin') {
+        // Finance also reads HR's employees and payroll (read-only, as hr_employees / hr_payroll): HR is their single source
+        $rows = q("SELECT IF(app = 'hr', CONCAT('hr_', col), col) AS col, id, data, deleted, ver FROM docs
+                   WHERE tenant_id = ? AND (app = 'fin' OR (app = 'hr' AND col IN ('employees', 'payroll'))) AND ver > ?" . ($since ? '' : ' AND deleted = 0'),
+            [$tid, $since])->fetchAll();
+    } elseif ($edit) {
         $rows = q('SELECT col, id, data, deleted, ver FROM docs WHERE tenant_id = ? AND app = ? AND ver > ?' . ($since ? '' : ' AND deleted = 0'),
             [$tid, $app, $since])->fetchAll();
     } else {
@@ -67,7 +72,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
             : ['col' => $r['col'], 'id' => $r['id'], 'data' => json_decode($r['data'], false)];
     }
     if (!$out) {
-        $max = max($since, (int)q('SELECT COALESCE(MAX(ver), 0) FROM docs WHERE tenant_id = ? AND app = ?', [$tid, $app])->fetchColumn());
+        $max = max($since, (int)q('SELECT COALESCE(MAX(ver), 0) FROM docs WHERE tenant_id = ?', [$tid])->fetchColumn());
     }
     // Hand-built so empty objects in stored documents stay {} rather than becoming []
     http_response_code(200);
@@ -83,6 +88,9 @@ $col = (string)($b['col'] ?? '');
 $id = (string)($b['id'] ?? '');
 if (!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $col) || !preg_match('/^[A-Za-z0-9_.:@-]{1,160}$/', $id) || !in_array($op, ['set', 'update', 'delete'], true)) {
     api_error(400, 'invalid-argument', 'Bad document path');
+}
+if (str_starts_with($col, 'hr_')) {
+    api_error(403, 'permission-denied', 'HR records are read-only here. Change them in the HR app.');
 }
 if (!$edit && !staff_may($col, $id, $own, true)) {
     api_error(403, 'permission-denied', 'Not allowed');
