@@ -43,6 +43,10 @@ if (!$f || ($f['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_nam
 if ($f['size'] > 10 * 1024 * 1024) {
     api_error(413, 'invalid-argument', t('Fail melebihi 10 MB.', 'The file is over 10 MB.'));
 }
+$used = (int)q('SELECT COALESCE(SUM(size), 0) FROM assets WHERE tenant_id = ?', [$tid])->fetchColumn();
+if ($used + (int)$f['size'] > (int)cfg('storage_limit_mb', 2048) * 1024 * 1024) {
+    api_error(413, 'resource-exhausted', t('Ruang storan fail syarikat anda sudah penuh. Hubungi kami.', "Your company's file storage is full. Contact us."));
+}
 $mime = (string)(new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
 if ($mime === 'application/zip' && str_ends_with(strtolower((string)$f['name']), '.docx')) {
     $mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';

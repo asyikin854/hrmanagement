@@ -27,6 +27,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             header('Location: ' . safe_next($next, $row['role'] === 'superadmin' ? '/admin/' : '/app/'), true, 303);
             exit;
         }
+        if (!$row || !$row['password_hash']) {
+            password_verify($pw, '$2y$10$n5I0cCv/dGs.QiD6rYBiYOeEFUyOptpBtwQpvr929nR96M/QHrXny'); // same timing as a real check
+        }
         record_failed_login($email);
         $err = t('E-mel atau kata laluan salah.', 'Wrong email or password.');
     }

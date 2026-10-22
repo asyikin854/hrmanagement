@@ -63,6 +63,11 @@ icons), `sitemap.xml`, `robots.txt`.
   tenant_id; every query in app/api must stay scoped to the session user's tenant.
 - `app/hr/app.html` and `app/finance/app.html` are generated from the demo copies by `python3 tools/build_app.py`;
   rebuild them whenever the demos are rebuilt. Plan prices live in `PLANS` in `app/lib/bootstrap.php`.
+- Root `.htaccess`: www→main host and /index.html→/ redirects, blocks .md/.py, security headers (HSTS, nosniff), caching,
+  `404.html`. A broken .htaccess takes the whole site down: test changes on Apache before pushing.
+- Security rules that must hold: staff-written clock records are sanitised in `app/api/data.php` and escaped in the HR
+  app's `whereCell` (the build checks this); AI calls reserve their slot before calling (`app/api/ai.php`) and are
+  capped by requests and US$ per company; `process_purchase` checks our payments table before calling CHIP.
 - Lead capture has no backend: the forms open WhatsApp or email with the visitor's details filled in. Don't add
   scripts that send data elsewhere without the owner's agreement.
 - Images: WebP, max ~1400px wide, with width/height and alt text in the page language; light and dark versions via

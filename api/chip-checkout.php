@@ -59,6 +59,16 @@ if ($name === '' || $company === '' || mb_strlen($name) > 128 || mb_strlen($comp
     back($lang, $plan, 'invalid');
 }
 
+// At most 10 payment attempts per IP an hour, so the form can't be used to flood CHIP or the payments table
+$withDb = is_array(cfg('db')) && !empty(cfg('db')['name']);
+if ($withDb) {
+    $recent = (int)q("SELECT COUNT(*) FROM login_attempts WHERE email = 'checkout' AND ip = ? AND at > ?", [client_ip(), date('Y-m-d H:i:s', time() - 3600)])->fetchColumn();
+    if ($recent >= 10) {
+        back($lang, $plan, 'error');
+    }
+    q("INSERT INTO login_attempts (ip, email, at) VALUES (?, 'checkout', ?)", [client_ip(), now()]);
+}
+
 $key = (string)cfg('chip_api_key');
 $brand = (string)cfg('chip_brand_id');
 if ($key === '' || $brand === '') {
@@ -66,8 +76,7 @@ if ($key === '' || $brand === '') {
     back($lang, $plan, 'error');
 }
 
-// Without a database the payment still works, but the account has to be set up by hand
-$withDb = is_array(cfg('db')) && !empty(cfg('db')['name']);
+// Without a database ($withDb false) the payment still works, but the account has to be set up by hand
 
 $p = PLANS[$plan];
 $body = [

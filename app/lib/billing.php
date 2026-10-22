@@ -49,14 +49,21 @@ function process_purchase(string $purchaseId): string
     if (!preg_match('/^[a-f0-9-]{36}$/', $purchaseId)) {
         return 'unknown';
     }
+    // Only purchases made through our checkout and not yet settled are worth asking CHIP about
+    $pay = q('SELECT * FROM payments WHERE purchase_id = ?', [$purchaseId])->fetch();
+    if (!$pay) {
+        return 'unknown';
+    }
+    if ($pay['status'] === 'paid') {
+        return 'already';
+    }
+    if ($pay['status'] === 'review') {
+        return 'review';
+    }
     $p = chip_request('GET', 'purchases/' . $purchaseId . '/');
     if (($p['brand_id'] ?? '') !== cfg('chip_brand_id')) {
         error_log('esr billing: purchase ' . $purchaseId . ' belongs to another brand');
         return 'unknown';
-    }
-    $pay = q('SELECT * FROM payments WHERE purchase_id = ?', [$purchaseId])->fetch();
-    if (!$pay) {
-        return 'unknown'; // only purchases made through our checkout are handled
     }
     $status = (string)($p['status'] ?? '');
     if ($status !== 'paid') {
@@ -68,9 +75,9 @@ function process_purchase(string $purchaseId): string
     $plan = PLANS[$pay['plan']] ?? null;
     $total = (int)($p['purchase']['total'] ?? -1);
     if (!$plan || $total !== (int)$pay['amount_sen'] || $total !== $plan['price'] || ($p['purchase']['currency'] ?? '') !== 'MYR') {
-        q("UPDATE payments SET status = 'review', note = ? WHERE id = ? AND status IN ('created','failed')",
-            ['Amount does not match the plan (' . $total . ' sen)', $pay['id']]);
-        notify_owner('Payment needs review', "CHIP purchase $purchaseId was paid but the amount does not match the plan. Check it in the dashboard.");
+        $changed = q("UPDATE payments SET status = 'review', note = ? WHERE id = ? AND status IN ('created','failed')",
+            ['Amount does not match the plan (' . $total . ' sen)', $pay['id']])->rowCount();
+        $changed && notify_owner('Payment needs review', "CHIP purchase $purchaseId was paid but the amount does not match the plan. Check it in the dashboard.");
         return 'review';
     }
     return provision($pay, $purchaseId);

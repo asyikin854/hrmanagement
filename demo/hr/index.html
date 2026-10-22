@@ -997,12 +997,12 @@ function attInfo(e,date){
   if(settings.autoFrom&&date>=settings.autoFrom&&(date<iso(TODAY)||(date===iso(TODAY)&&hm(new Date())>=settings.absentCutoff)))return {status:"Absent",src:"Auto",ck};
   return {status:"",src:"",ck};
 }
-function whereCell(ck){
+function whereCell(ck){ // clock records are written by staff phones: escape or coerce every field
   if(!ck||!ck.in)return "—";const i=ck.in;
-  const map=i.lat!=null?` <a href="https://www.google.com/maps?q=${i.lat},${i.lng}" target="_blank" rel="noopener">map</a>`:"";
-  if(i.loc)return `<span class="where">${esc(ck.mode||"")}<small class="warn">No location (${i.loc==="denied"?"permission denied":i.loc})</small></span>`;
-  if(ck.mode==="Remote")return `<span class="where">Remote${map}<small>${i.site?fmtDist(i.dist)+" from "+esc(i.site):""}</small></span>`;
-  return i.inRange?`<span class="where">${esc(i.site||"Office")}${map}<small>${fmtDist(i.dist)} away · ±${i.acc} m</small></span>`:`<span class="where warn">Away from office${map}<small>${i.site?fmtDist(i.dist)+" from "+esc(i.site):"No office set up"} · ±${i.acc} m</small></span>`;
+  const map=i.lat!=null?` <a href="https://www.google.com/maps?q=${Number(i.lat)||0},${Number(i.lng)||0}" target="_blank" rel="noopener">map</a>`:"";
+  if(i.loc)return `<span class="where">${esc(ck.mode||"")}<small class="warn">No location (${i.loc==="denied"?"permission denied":esc(i.loc)})</small></span>`;
+  if(ck.mode==="Remote")return `<span class="where">Remote${map}<small>${i.site?fmtDist(Number(i.dist)||0)+" from "+esc(i.site):""}</small></span>`;
+  return i.inRange?`<span class="where">${esc(i.site||"Office")}${map}<small>${fmtDist(Number(i.dist)||0)} away · ±${Number(i.acc)||0} m</small></span>`:`<span class="where warn">Away from office${map}<small>${i.site?fmtDist(Number(i.dist)||0)+" from "+esc(i.site):"No office set up"} · ±${Number(i.acc)||0} m</small></span>`;
 }
 function unlinkedClocks(){const wk=iso(new Date(TODAY.getTime()-7*864e5));return S.clock.filter(c=>!S.employees.some(e=>clockDocFor(e)===c)&&Object.keys(c.days||{}).some(k=>k>=wk))}
 function renderAttendance(){

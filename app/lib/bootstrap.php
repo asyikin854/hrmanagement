@@ -162,7 +162,7 @@ function start_session(): void
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
-    $https = ($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off';
+    $https = str_starts_with((string)cfg('site'), 'https://') || (($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off');
     session_name('ESRSESS');
     session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'secure' => $https, 'httponly' => true, 'samesite' => 'Lax']);
     session_start();
@@ -238,13 +238,15 @@ function check_csrf(): void
     }
 }
 
-// Login throttling: 8 failed tries per email or 20 per IP in 15 minutes
+// Login throttling. Counted per email from the same IP, so nobody can lock the real user out from elsewhere,
+// with looser caps per IP (many emails) and per email (many IPs) against wider guessing.
 function too_many_attempts(string $email): bool
 {
     $since = date('Y-m-d H:i:s', time() - 900);
+    $pair = (int)q('SELECT COUNT(*) FROM login_attempts WHERE email = ? AND ip = ? AND at > ?', [$email, client_ip(), $since])->fetchColumn();
+    $byIp = (int)q("SELECT COUNT(*) FROM login_attempts WHERE ip = ? AND at > ? AND email <> 'checkout'", [client_ip(), $since])->fetchColumn();
     $byEmail = (int)q('SELECT COUNT(*) FROM login_attempts WHERE email = ? AND at > ?', [$email, $since])->fetchColumn();
-    $byIp = (int)q('SELECT COUNT(*) FROM login_attempts WHERE ip = ? AND at > ?', [client_ip(), $since])->fetchColumn();
-    return $byEmail >= 8 || $byIp >= 20;
+    return $pair >= 8 || $byIp >= 30 || $byEmail >= 50;
 }
 
 function record_failed_login(string $email): void

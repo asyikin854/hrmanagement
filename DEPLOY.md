@@ -93,6 +93,8 @@ return [
     'cron_token' => 'MAKE UP ANOTHER LONG RANDOM CODE',    // protects the daily job URL
     'anthropic_api_key' => 'sk-ant-...',      // AI features; leave '' to switch AI off
     'ai_monthly_limit' => 300,                // AI requests per company per month
+    'ai_monthly_usd' => 25,                   // and an estimated AI spend cap per company per month (US$)
+    'storage_limit_mb' => 2048,               // uploaded files (CVs) per company
     // Optional, if emails from the server land in spam: send through your mailbox instead
     // 'smtp' => ['host' => 'mail.esrmy.com', 'port' => 587, 'user' => 'work@esrmy.com', 'pass' => 'MAILBOX PASSWORD'],
 ];
@@ -101,7 +103,8 @@ return [
    The CHIP key stays in `chip-config.php`; it is read from there.
 3. **Deploy** (Git > Pull now / Deploy now), then open https://hrmanagement.esrmy.com/admin/setup.php, enter the
    `admin_setup_token`, and create your dashboard login. That page stops working once your login exists.
-4. **Daily job.** Plesk > **Scheduled Tasks** > **Add Task** > *Fetch a URL*, daily:
+4. **Daily job.** Plesk > **Scheduled Tasks** > **Add Task** > *Run a PHP script*, daily, script path
+   `hrmanagement.esrmy.com/app/cron.php` (preferred: no token in any URL). Or *Fetch a URL*:
    `https://hrmanagement.esrmy.com/app/cron.php?token=<cron_token>`. It re-checks payments CHIP hasn't confirmed and
    emails customers 14 days before their subscription ends.
 5. **Test.** In the dashboard, Subscribers > *Add a subscriber by hand*, with your own email. Check the welcome email
@@ -110,3 +113,10 @@ return [
 
 Uploaded files (CVs) are kept in `esr-data/` next to the settings file, outside the website folder. Back up the
 database and that folder (Plesk > Backup Manager).
+
+## 8. Security settings in Plesk (once)
+
+- **www address:** the root `.htaccess` redirects `www.hrmanagement.esrmy.com` to the main address. If the www name has no
+  SSL certificate, either include it in the Let's Encrypt certificate or remove the www DNS record.
+- **PHP settings** for the subdomain: set `expose_php` to Off.
+- `.htaccess` also blocks `.md`/`.py` files, sets HSTS, nosniff and frame headers, browser caching and the 404 page.

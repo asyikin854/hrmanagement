@@ -18,6 +18,32 @@ if (!$edit && $app !== 'hr') {
     api_error(403, 'permission-denied', 'Not allowed');
 }
 
+// Clock records come from staff phones. Strip characters that could form markup, cap string lengths,
+// and stamp the server's own time so HR can tell if a phone's clock was wrong or changed.
+function clean_clock(mixed $v, int $depth = 0): mixed
+{
+    if ($depth > 8) {
+        return null;
+    }
+    if (is_string($v)) {
+        return mb_substr(str_replace(['<', '>', '"', "'", '`', '\\'], '', $v), 0, 200);
+    }
+    if (is_array($v)) {
+        return array_map(fn($x) => clean_clock($x, $depth + 1), $v);
+    }
+    if (is_object($v)) {
+        $o = new stdClass();
+        foreach (get_object_vars($v) as $k => $x) {
+            $k = preg_replace('/[^A-Za-z0-9_.:-]/', '', (string)$k);
+            if ($k !== '') {
+                $o->$k = clean_clock($x, $depth + 1);
+            }
+        }
+        return $o;
+    }
+    return $v;
+}
+
 function staff_may(string $col, string $id, string $own, bool $write): bool
 {
     return ($col === 'clock' && $id === $own) || (!$write && $col === 'pub' && $id === 'clock');
@@ -102,8 +128,12 @@ try {
         }
         $data = $doc;
     }
+    if ($col === 'clock') {
+        $data = clean_clock($data);
+        $data->serverAt = date('c');
+    }
     $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    if (strlen($json) > 8 * 1024 * 1024) {
+    if (strlen($json) > ($col === 'clock' ? 256 * 1024 : 8 * 1024 * 1024)) {
         $pdo->rollBack();
         api_error(413, 'invalid-argument', t('Rekod ini terlalu besar.', 'That record is too large.'));
     }

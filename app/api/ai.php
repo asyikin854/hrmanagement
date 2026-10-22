@@ -14,15 +14,27 @@ if ($key === '') {
 }
 $tid = (int)$u['tenant_id'];
 $month = date('Y-m');
-$used = (int)q('SELECT requests FROM ai_usage WHERE tenant_id = ? AND month = ?', [$tid, $month])->fetchColumn();
 $limit = (int)cfg('ai_monthly_limit', 300);
-if ($used >= $limit) {
-    api_error(429, 'resource-exhausted', t(
-        "Had AI bulanan akaun anda ($limit permintaan) telah dicapai. Ia ditetapkan semula pada awal bulan depan, atau hubungi kami untuk menambahnya.",
-        "Your account has used this month's AI allowance ($limit requests). It resets at the start of next month, or contact us to raise it."));
+$budget = (float)cfg('ai_monthly_usd', 25);   // estimated US$ per company per month
+$pin = (float)cfg('ai_price_in', 4.0);        // US$ per million input tokens (Claude Opus 5.5)
+$pout = (float)cfg('ai_price_out', 20.0);     // US$ per million output tokens
+$full = fn() => api_error(429, 'resource-exhausted', t(
+    'Had AI bulanan akaun anda telah dicapai. Ia ditetapkan semula pada awal bulan depan, atau hubungi kami di 011-1632 0694 untuk menambahnya.',
+    "Your account has used this month's AI allowance. It resets at the start of next month, or contact us on 011-1632 0694 to raise it."));
+// Reserve this request before calling the AI, so parallel requests can't slip past the limits
+q('INSERT IGNORE INTO ai_usage (tenant_id, month, requests) VALUES (?, ?, 0)', [$tid, $month]);
+$ok = q('UPDATE ai_usage SET requests = requests + 1 WHERE tenant_id = ? AND month = ? AND requests < ?
+         AND (input_tokens * ? + output_tokens * ?) / 1000000 < ?', [$tid, $month, $limit, $pin, $pout, $budget])->rowCount();
+if (!$ok) {
+    $full();
 }
 
-$b = body_json(16 * 1024 * 1024);
+register_shutdown_function(function () use ($tid, $month) {
+    if (http_response_code() === 400 || http_response_code() === 413) { // bad request: don't count it
+        q('UPDATE ai_usage SET requests = GREATEST(requests - 1, 0) WHERE tenant_id = ? AND month = ?', [$tid, $month]);
+    }
+});
+$b = body_json(8 * 1024 * 1024);
 $messages = $b['messages'] ?? null;
 if (!is_array($messages) || !$messages || count($messages) > 80) {
     api_error(400, 'invalid-argument', 'Bad request');
@@ -82,6 +94,7 @@ curl_close($ch);
 $r = is_string($res) ? json_decode($res, false) : null;
 
 if ($code !== 200 || !is_object($r)) {
+    q('UPDATE ai_usage SET requests = GREATEST(requests - 1, 0) WHERE tenant_id = ? AND month = ?', [$tid, $month]);
     error_log('esr ai: HTTP ' . $code . ': ' . substr((string)$res, 0, 500));
     $busy = in_array($code, [429, 500, 502, 503, 529], true);
     api_error($busy ? 503 : 502, 'unavailable', $busy
@@ -90,9 +103,8 @@ if ($code !== 200 || !is_object($r)) {
 }
 
 $in = (int)($r->usage->input_tokens ?? 0) + (int)($r->usage->cache_read_input_tokens ?? 0) + (int)($r->usage->cache_creation_input_tokens ?? 0);
-q('INSERT INTO ai_usage (tenant_id, month, requests, input_tokens, output_tokens) VALUES (?, ?, 1, ?, ?)
-   ON DUPLICATE KEY UPDATE requests = requests + 1, input_tokens = input_tokens + VALUES(input_tokens), output_tokens = output_tokens + VALUES(output_tokens)',
-    [$tid, $month, $in, (int)($r->usage->output_tokens ?? 0)]);
+q('UPDATE ai_usage SET input_tokens = input_tokens + ?, output_tokens = output_tokens + ? WHERE tenant_id = ? AND month = ?',
+    [$in, (int)($r->usage->output_tokens ?? 0), $tid, $month]);
 
 if (($r->stop_reason ?? '') === 'refusal') {
     api_error(422, 'refused', t('AI tidak dapat membantu dengan permintaan ini.', "The AI couldn't help with this request."));

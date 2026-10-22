@@ -41,14 +41,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $new = ['id' => (int)db()->lastInsertId(), 'email' => $email, 'name' => $name];
             $link = make_password_link($new['id']);
             $ok = invite_mail($new, $link, (string)$u['company'], $role);
+            if ($ok) {
+                $link = ''; // shown only when the email couldn't be sent
+            }
             $msg = flash('good', h($name) . ' ' . ($ok ? t('telah dijemput melalui e-mel.', 'has been invited by email.')
                     : t('telah ditambah, tetapi e-mel gagal dihantar. Hantar pautan di bawah kepada mereka.', "was added, but the email couldn't be sent. Send them the link below.")));
         }
     } elseif ($act === 'resend' || $act === 'remove') {
         $t = q("SELECT * FROM users WHERE id = ? AND tenant_id = ? AND role <> 'owner'", [(int)($_POST['id'] ?? 0), $tid])->fetch();
-        if ($t && $act === 'resend' && $t['active']) {
+        if ($t && $act === 'resend' && $t['active'] && !$t['password_hash']) { // only for people who haven't set up yet
             $link = make_password_link((int)$t['id']);
             $ok = invite_mail($t, $link, (string)$u['company'], $t['role']);
+            if ($ok) {
+                $link = '';
+            }
             $msg = flash($ok ? 'good' : 'bad', $ok ? t('Jemputan dihantar semula.', 'Invitation sent again.') : t('E-mel gagal dihantar. Hantar pautan di bawah kepada mereka.', "The email couldn't be sent. Send them the link below."));
         } elseif ($t && $act === 'remove' && (int)$t['id'] !== (int)$u['id']) {
             q('UPDATE users SET active = 0 WHERE id = ?', [$t['id']]);
