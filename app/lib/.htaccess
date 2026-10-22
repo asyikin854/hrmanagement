@@ -1,0 +1,2 @@
+# PHP includes only; never served directly
+Require all denied

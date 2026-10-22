@@ -1,21 +1,10 @@
 <?php
 // Creates a CHIP purchase for a subscription plan and sends the customer to CHIP's FPX payment page.
-// The CHIP API key is NOT in this repository (it is public). On the server it is read from the
-// CHIP_API_KEY / CHIP_BRAND_ID environment variables, or from chip-config.php one folder above the
-// web root (see DEPLOY.md, "CHIP payments").
+// The purchase is recorded in the database; when CHIP confirms the payment (api/chip-callback.php) the
+// customer's account is created or extended. Keys and passwords are in esr-config.php / chip-config.php
+// one folder above the web root, never in this repository (see DEPLOY.md).
 declare(strict_types=1);
-
-const SITE = 'https://hrmanagement.esrmy.com';
-const CHIP_PURCHASES = 'https://gate.chip-in.asia/api/v1/purchases/';
-// Prices in sen, set here on the server so the form cannot change them.
-const PLANS = [
-    'quarterly' => ['price' => 55000, 'code' => 'Q',
-        'ms' => 'Langganan 3 bulan: sistem HR, gaji dan kewangan',
-        'en' => '3-month subscription: HR, payroll and finance system'],
-    'yearly' => ['price' => 199900, 'code' => 'Y',
-        'ms' => 'Langganan tahunan: sistem HR, gaji dan kewangan',
-        'en' => 'Yearly subscription: HR, payroll and finance system'],
-];
+require __DIR__ . '/../app/lib/bootstrap.php';
 
 function form_url(string $lang, string $plan, string $status = ''): string
 {
@@ -23,28 +12,13 @@ function form_url(string $lang, string $plan, string $status = ''): string
     if ($status !== '') {
         $q['status'] = $status;
     }
-    return SITE . ($lang === 'en' ? '/en/subscribe/' : '/langgan/') . '?' . http_build_query($q) . '#form';
+    return rtrim((string)cfg('site'), '/') . ($lang === 'en' ? '/en/subscribe/' : '/langgan/') . '?' . http_build_query($q) . '#form';
 }
 
 function back(string $lang, string $plan, string $status): void
 {
     header('Location: ' . form_url($lang, $plan, $status), true, 303);
     exit;
-}
-
-function config(): array
-{
-    $key = getenv('CHIP_API_KEY') ?: '';
-    $brand = getenv('CHIP_BRAND_ID') ?: '';
-    if ($key === '' || $brand === '') {
-        $file = dirname((string)($_SERVER['DOCUMENT_ROOT'] ?? __DIR__ . '/..')) . '/chip-config.php';
-        if (is_file($file)) {
-            $c = require $file;
-            $key = (string)($c['api_key'] ?? '');
-            $brand = (string)($c['brand_id'] ?? '');
-        }
-    }
-    return [$key, $brand];
 }
 
 // Malaysian numbers to +60 format, as CHIP expects an international number.
@@ -61,8 +35,9 @@ function phone(string $raw): string
 }
 
 header('Cache-Control: no-store');
+$site = rtrim((string)cfg('site'), '/');
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
-    header('Location: ' . SITE . '/#pricing', true, 303);
+    header('Location: ' . $site . '/#pricing', true, 303);
     exit;
 }
 
@@ -77,18 +52,22 @@ if ((string)($_POST['website'] ?? '') !== '') { // hidden field: only bots fill 
 
 $name = trim((string)($_POST['name'] ?? ''));
 $company = trim((string)($_POST['company'] ?? ''));
-$email = trim((string)($_POST['email'] ?? ''));
+$email = strtolower(trim((string)($_POST['email'] ?? '')));
 $tel = phone((string)($_POST['phone'] ?? ''));
-if ($name === '' || $company === '' || mb_strlen($name) > 128 || mb_strlen($company) > 128
+if ($name === '' || $company === '' || mb_strlen($name) > 128 || mb_strlen($company) > 128 || strlen($email) > 160
     || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($tel) < 10 || strlen($tel) > 16) {
     back($lang, $plan, 'invalid');
 }
 
-[$key, $brand] = config();
+$key = (string)cfg('chip_api_key');
+$brand = (string)cfg('chip_brand_id');
 if ($key === '' || $brand === '') {
     error_log('chip-checkout: CHIP API key or brand ID is not set on the server');
     back($lang, $plan, 'error');
 }
+
+// Without a database the payment still works, but the account has to be set up by hand
+$withDb = is_array(cfg('db')) && !empty(cfg('db')['name']);
 
 $p = PLANS[$plan];
 $body = [
@@ -97,12 +76,15 @@ $body = [
     'client' => ['email' => $email, 'full_name' => $name, 'legal_name' => $company, 'phone' => $tel],
     'purchase' => ['currency' => 'MYR', 'products' => [['name' => $p[$lang], 'price' => $p['price']]]],
     'send_receipt' => true,
-    'success_redirect' => SITE . ($lang === 'en' ? '/en/subscription-confirmed/' : '/langganan-berjaya/'),
+    'success_redirect' => $site . ($lang === 'en' ? '/en/subscription-confirmed/' : '/langganan-berjaya/'),
     'failure_redirect' => form_url($lang, $plan, 'failed'),
     'cancel_redirect' => form_url($lang, $plan, 'cancelled'),
 ];
+if ($withDb) {
+    $body['success_callback'] = $site . '/api/chip-callback.php';
+}
 
-$ch = curl_init(CHIP_PURCHASES);
+$ch = curl_init('https://gate.chip-in.asia/api/v1/purchases/');
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_RETURNTRANSFER => true,
@@ -119,5 +101,16 @@ $url = is_array($data) ? (string)($data['checkout_url'] ?? '') : '';
 if ($code < 200 || $code >= 300 || !str_starts_with($url, 'https://')) {
     error_log('chip-checkout: CHIP returned HTTP ' . $code . ': ' . substr((string)$res, 0, 500));
     back($lang, $plan, 'error');
+}
+
+if ($withDb) {
+    try {
+        q('INSERT INTO payments (purchase_id, email, name, company, phone, plan, amount_sen, status, lang, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [(string)$data['id'], $email, $name, $company, $tel, $plan, $p['price'], 'created', $lang, now()]);
+    } catch (Throwable $e) {
+        error_log('chip-checkout: could not record purchase ' . ($data['id'] ?? '') . ': ' . $e->getMessage());
+        back($lang, $plan, 'error');
+    }
 }
 header('Location: ' . $url, true, 303);

@@ -70,3 +70,43 @@ return [
    Plesk's **Logs** show the reason (lines starting `chip-checkout:`).
 5. Paid subscriptions appear in the CHIP dashboard, and CHIP emails the customer a receipt. Set up the customer's
    account and contact them.
+
+## 7. Customer accounts, the apps and your dashboard
+
+After a CHIP payment the customer's account is created automatically, and they get an email to set their password.
+They log in at https://hrmanagement.esrmy.com/app/ to use the HR and Finance apps. You watch subscribers, payments
+and revenue at https://hrmanagement.esrmy.com/admin/. This needs a database and one settings file, set up once.
+
+1. **Database.** Plesk > **Websites & Domains** > hrmanagement.esrmy.com > **Databases** > **Add Database**.
+   Type MySQL/MariaDB, any name (for example `esr_app`), and create a database user with a strong password.
+   The tables are created automatically on first use.
+2. **Settings file.** In **Files**, in the same folder as `chip-config.php` (Home directory, *not* inside
+   `hrmanagement.esrmy.com`), create `esr-config.php`:
+
+```php
+<?php
+return [
+    'db' => ['host' => 'localhost', 'name' => 'esr_app', 'user' => 'DATABASE USER', 'pass' => 'DATABASE PASSWORD'],
+    'owner_email' => 'work@esrmy.com',        // gets an email for every new subscriber and renewal
+    'mail_from' => 'work@esrmy.com',          // sender of the customer emails
+    'admin_setup_token' => 'MAKE UP A LONG RANDOM CODE',   // used once, at /admin/setup.php
+    'cron_token' => 'MAKE UP ANOTHER LONG RANDOM CODE',    // protects the daily job URL
+    'anthropic_api_key' => 'sk-ant-...',      // AI features; leave '' to switch AI off
+    'ai_monthly_limit' => 300,                // AI requests per company per month
+    // Optional, if emails from the server land in spam: send through your mailbox instead
+    // 'smtp' => ['host' => 'mail.esrmy.com', 'port' => 587, 'user' => 'work@esrmy.com', 'pass' => 'MAILBOX PASSWORD'],
+];
+```
+
+   The CHIP key stays in `chip-config.php`; it is read from there.
+3. **Deploy** (Git > Pull now / Deploy now), then open https://hrmanagement.esrmy.com/admin/setup.php, enter the
+   `admin_setup_token`, and create your dashboard login. That page stops working once your login exists.
+4. **Daily job.** Plesk > **Scheduled Tasks** > **Add Task** > *Fetch a URL*, daily:
+   `https://hrmanagement.esrmy.com/app/cron.php?token=<cron_token>`. It re-checks payments CHIP hasn't confirmed and
+   emails customers 14 days before their subscription ends.
+5. **Test.** In the dashboard, Subscribers > *Add a subscriber by hand*, with your own email. Check the welcome email
+   arrives (and isn't in spam), set the password, open HR and Finance. If emails don't arrive, add the `smtp` block.
+6. **AI key.** Create it at console.anthropic.com > API keys, and set a monthly spend limit there too.
+
+Uploaded files (CVs) are kept in `esr-data/` next to the settings file, outside the website folder. Back up the
+database and that folder (Plesk > Backup Manager).

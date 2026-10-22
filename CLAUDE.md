@@ -47,13 +47,22 @@ icons), `sitemap.xml`, `robots.txt`.
 - New page → add it to `sitemap.xml` with hreflang links; update `<lastmod>` whenever a page changes.
 - Subscriptions (CHIP, FPX): the Pricing section on both home pages has a 3-month (RM550) and a yearly (RM1,999)
   plan card. "Subscribe" links go to the form at `/langgan/` (BM) or `/en/subscribe/` (EN) with `?plan=quarterly|yearly`.
-  The form posts to `api/chip-checkout.php`, which sets the price on the server, creates a CHIP purchase and redirects
-  to CHIP's payment page. CHIP returns customers to `/langganan-berjaya/` or `/en/subscription-confirmed/` on success,
+  The form posts to `api/chip-checkout.php`, which sets the price on the server, records the payment, creates a CHIP
+  purchase and redirects to CHIP's payment page. CHIP returns customers to `/langganan-berjaya/` or `/en/subscription-confirmed/` on success,
   or back to the form with `?status=failed|cancelled` (`invalid`/`error` come from the PHP). These four pages are
   noindex and not in the sitemap. **The CHIP API key must never be committed** (this repo is public): the PHP reads
   `CHIP_API_KEY`/`CHIP_BRAND_ID` env vars or `chip-config.php` one folder above the web root (DEPLOY.md). If prices
-  change, update `PLANS` in the PHP, the plan cards, both form pages, meta descriptions, FAQ (visible and JSON-LD)
+  change, update `PLANS` in `app/lib/bootstrap.php`, the plan cards, both form pages, meta descriptions, FAQ (visible and JSON-LD)
   and the JSON-LD offers on both home pages.
+- Customer accounts (PHP + MySQL, no build step): `app/lib/` (bootstrap: config, schema, sessions, mail; billing: CHIP
+  verification and provisioning; api; layout), `api/chip-callback.php` (CHIP success_callback; re-fetches the purchase
+  from CHIP, only "paid" counts), `app/` (customer login, account, team, `cron.php`), `app/api/` (data, session, ai,
+  assets), `app/runtime.js` (gives the apps the `window.claude.use` interface backed by app/api), `admin/` (owner
+  dashboard). Secrets live in `esr-config.php` and `chip-config.php` one folder above the web root, never here.
+  Roles: owner/admin (full apps), staff (HR clock-in only), superadmin (dashboard). Every company's data is keyed by
+  tenant_id; every query in app/api must stay scoped to the session user's tenant.
+- `app/hr/app.html` and `app/finance/app.html` are generated from the demo copies by `python3 tools/build_app.py`;
+  rebuild them whenever the demos are rebuilt. Plan prices live in `PLANS` in `app/lib/bootstrap.php`.
 - Lead capture has no backend: the forms open WhatsApp or email with the visitor's details filled in. Don't add
   scripts that send data elsewhere without the owner's agreement.
 - Images: WebP, max ~1400px wide, with width/height and alt text in the page language; light and dark versions via

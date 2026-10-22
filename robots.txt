@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /app/
+Disallow: /admin/
 
 Sitemap: https://hrmanagement.esrmy.com/sitemap.xml
