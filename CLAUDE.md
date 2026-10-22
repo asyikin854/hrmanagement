@@ -45,13 +45,15 @@ icons), `sitemap.xml`, `robots.txt`.
   SoftwareApplication + FAQPage on home, WebApplication on the calculator, Article on the EA guide, BreadcrumbList on
   tool pages). FAQ JSON-LD must match the visible FAQ text exactly. Text must be in the HTML, not injected by JS.
 - New page → add it to `sitemap.xml` with hreflang links; update `<lastmod>` whenever a page changes.
-- Subscriptions: the Pricing section on both home pages has a 3-month and a yearly plan card. Each "Subscribe"
-  button (`data-plan="quarterly"` / `"yearly"`) opens the payment gateway's hosted payment page set in `PAY_LINKS` at
-  the top of `assets/js/main.js`; while a link is empty the button opens WhatsApp with the plan named. Never put gateway
-  secret keys in this repo (it is public); use the gateway's ready-made payment page links only. After paying, the
-  gateway should return customers to `/langganan-berjaya/` (BM) or `/en/subscription-confirmed/` (EN); both are
-  noindex and not in the sitemap. If prices change, update the plan cards, meta descriptions, FAQ (visible and
-  JSON-LD) and the JSON-LD offers on both home pages.
+- Subscriptions (CHIP, FPX): the Pricing section on both home pages has a 3-month (RM550) and a yearly (RM1,999)
+  plan card. "Subscribe" links go to the form at `/langgan/` (BM) or `/en/subscribe/` (EN) with `?plan=quarterly|yearly`.
+  The form posts to `api/chip-checkout.php`, which sets the price on the server, creates a CHIP purchase and redirects
+  to CHIP's payment page. CHIP returns customers to `/langganan-berjaya/` or `/en/subscription-confirmed/` on success,
+  or back to the form with `?status=failed|cancelled` (`invalid`/`error` come from the PHP). These four pages are
+  noindex and not in the sitemap. **The CHIP API key must never be committed** (this repo is public): the PHP reads
+  `CHIP_API_KEY`/`CHIP_BRAND_ID` env vars or `chip-config.php` one folder above the web root (DEPLOY.md). If prices
+  change, update `PLANS` in the PHP, the plan cards, both form pages, meta descriptions, FAQ (visible and JSON-LD)
+  and the JSON-LD offers on both home pages.
 - Lead capture has no backend: the forms open WhatsApp or email with the visitor's details filled in. Don't add
   scripts that send data elsewhere without the owner's agreement.
 - Images: WebP, max ~1400px wide, with width/height and alt text in the page language; light and dark versions via

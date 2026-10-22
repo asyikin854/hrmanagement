@@ -46,3 +46,27 @@ In Plesk, **SSL/TLS Certificates** for the subdomain > issue a free **Let's Encr
 2. Verify with the HTML tag: paste it into the `<head>` of `index.html` and `en/index.html`, commit, push, then click Verify.
 3. Sitemaps > submit `sitemap.xml`.
 4. URL inspection > request indexing for each page.
+
+## 6. CHIP payments (subscriptions)
+
+The subscribe form sends customers to CHIP to pay by FPX. The CHIP API key must stay on the server, never in GitHub.
+
+1. In Plesk, open **Files** and go to the folder **above** the subdomain's document root (the folder that contains
+   the `hrmanagement.esrmy.com` folder, not inside it).
+2. Create a file named `chip-config.php` there with:
+
+```php
+<?php
+return [
+    'api_key'  => 'PASTE YOUR CHIP SECRET KEY HERE',
+    'brand_id' => 'PASTE YOUR CHIP BRAND ID HERE',
+];
+```
+
+   (Or set `CHIP_API_KEY` and `CHIP_BRAND_ID` as environment variables in Plesk's PHP settings instead.)
+3. Check PHP is on for the subdomain: **Websites & Domains** > hrmanagement.esrmy.com > **PHP Settings** (PHP 8.1 or newer, with curl).
+4. Test: open https://hrmanagement.esrmy.com/langgan/, fill in the form and press **Teruskan ke bayaran**. You should
+   land on CHIP's FPX page. If you get "halaman bayaran tidak dapat dibuka", the key file is missing or wrong;
+   Plesk's **Logs** show the reason (lines starting `chip-checkout:`).
+5. Paid subscriptions appear in the CHIP dashboard, and CHIP emails the customer a receipt. Set up the customer's
+   account and contact them.
