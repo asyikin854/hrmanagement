@@ -443,7 +443,7 @@ function postings(){
   S.journals.forEach(j=>(j.lines||[]).forEach(l=>add(j.date,l.account,l.debit,l.credit,j.kind==="Payroll"?"Payroll":j.kind==="GST"?"GST payment":"Journal",j.id,l.memo||j.memo,"j:"+j.id)));
   if(hrLinked()){const done=new Set(S.journals.map(j=>j.ref)),pcbAcc=acc(AC.PCB)?AC.PCB:AC.CPF;
     (S.hr_payroll||[]).filter(r=>r.status==="Finalized"&&!done.has("Payroll "+r.id)).forEach(r=>{const t=r.totals||{},[y,m]=r.id.split("-").map(Number),me=iso(new Date(y,m,0)),fd=(r.finalizedAt||"").slice(0,10),dt=fd&&fd>=r.id+"-01"&&fd<me?fd:me,g="hrpay:"+r.id,memo=`Payroll ${r.id} (from HR)`;
-      const wage=r2((t.base||0)+(t.allowance||0)-(t.unpaid||0)),claims=r2(t.claims||0),ee=r2((t.epfEe||0)+(t.socsoEe||0)+(t.eisEe||0)),er=r2((t.epfEr||0)+(t.socsoEr||0)+(t.eisEr||0)),tax=r2((t.pcb||0)+(t.zakat||0));
+      const wage=r2((t.base||0)+(t.allowance||0)+(t.bonus||0)-(t.unpaid||0)),claims=r2(t.claims||0),ee=r2((t.epfEe||0)+(t.socsoEe||0)+(t.eisEe||0)),er=r2((t.epfEr||0)+(t.socsoEr||0)+(t.eisEr||0)),tax=r2((t.pcb||0)+(t.zakat||0));
       add(dt,AC.SAL,wage,0,"Payroll","",memo,g);add(dt,AC.CLAIMS,claims,0,"Payroll","",memo,g);add(dt,AC.CPFER,er,0,"Payroll","",memo,g);
       add(dt,AC.CPF,0,r2(ee+er),"Payroll","",memo,g);add(dt,pcbAcc,0,tax,"Payroll","",memo,g);add(dt,AC.BANK,0,r2(wage+claims-ee-tax),"Payroll","",memo,g)})}
   S.banklines.filter(b=>b.status==="Categorised"&&b.account).forEach(b=>{const a=Number(b.amount),g="bl:"+b.id,net=b.gst&&gstOn()?r2(Math.abs(a)/(1+settings.gstRate/100)):Math.abs(a),tax=r2(Math.abs(a)-net);
@@ -954,8 +954,8 @@ function hrMap(){
     residence:x.taxResidence||"Resident",marital:x.marital||"Single",children:Number(x.children)||0,salary:r2((Number(x.salary)||0)/12),allowance:Number(x.allowance)||0,zakat:Number(x.zakat)||0,
     start:x.hireDate||"",end:x.exitDate||"",roster:x.id}));
   const own=Object.fromEntries(S.my_payroll.map(r=>[r.id,r]));
-  const p=(S.hr_payroll||[]).map(r=>{const lines=(r.lines||[]).map(l=>{const base=r2((l.base||0)-(l.unpaid||0)),allowance=r2(l.allowance||0),gross=l.taxable!=null?r2(l.taxable):r2(base+allowance),zakat=r2(l.zakat||0);
-      return {empId:l.employeeId,name:l.name,days:l.days,base,allowance,bonus:0,gross,epfEe:l.epfEe||0,epfEr:l.epfEr||0,socsoEe:l.socsoEe||0,socsoEr:l.socsoEr||0,eisEe:l.eisEe||0,eisEr:l.eisEr||0,
+  const p=(S.hr_payroll||[]).map(r=>{const lines=(r.lines||[]).map(l=>{const base=r2((l.base||0)-(l.unpaid||0)),allowance=r2(l.allowance||0),bonus=r2(l.bonus||0),gross=l.taxable!=null?r2(l.taxable):r2(base+allowance+bonus),zakat=r2(l.zakat||0);
+      return {empId:l.employeeId,name:l.name,days:l.days,base,allowance,bonus,gross,epfEe:l.epfEe||0,epfEr:l.epfEr||0,socsoEe:l.socsoEe||0,socsoEr:l.socsoEr||0,eisEe:l.eisEe||0,eisEr:l.eisEr||0,
         pcb:l.pcb||0,zakat,P:l.P??null,cat:l.cat??1,net:r2(gross-(l.epfEe||0)-(l.socsoEe||0)-(l.eisEe||0)-(l.pcb||0)-zakat)}});
     const tot={};["gross","epfEe","epfEr","socsoEe","socsoEr","eisEe","eisEr","pcb","zakat","net"].forEach(k=>tot[k]=r2(lines.reduce((a,l)=>a+l[k],0)));
     const o=own[r.id]||{};return {id:r.id,month:r.id,status:r.status,lines,totals:tot,bonuses:{},pcbPaid:o.pcbPaid||null,statPaid:o.statPaid||null}});
